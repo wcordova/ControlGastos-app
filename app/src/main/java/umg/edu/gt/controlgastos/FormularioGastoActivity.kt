@@ -1,8 +1,10 @@
 package umg.edu.gt.controlgastos
 
 import android.os.Bundle
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -10,6 +12,7 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import edu.umg.programacion2.gastos.modelo.Categoria
 import edu.umg.programacion2.gastos.modelo.Gasto
+import edu.umg.programacion2.gastos.servicio.formatearQuetzales
 import kotlinx.coroutines.launch
 import umg.edu.gt.controlgastos.databinding.ActivityFormularioGastoBinding
 import java.text.SimpleDateFormat
@@ -50,6 +53,7 @@ class FormularioGastoActivity : AppCompatActivity() {
         }
 
         binding.btnGuardar.setOnClickListener { guardar() }
+        binding.btnEliminar.setOnClickListener { confirmarEliminacion() }
     }
 
     /** Modo EDITAR: busca el gasto y llena los campos con sus datos. */
@@ -64,6 +68,7 @@ class FormularioGastoActivity : AppCompatActivity() {
 
         binding.tvTitulo.text = "Editar gasto"
         binding.btnGuardar.text = "Guardar cambios"
+        binding.btnEliminar.visibility = View.VISIBLE
         // Cuidado: un EditText se llena con setText(...), no con "text = ...".
         binding.etDescripcion.setText(gasto.descripcion)
         binding.etMonto.setText(gasto.monto.toString())
@@ -106,6 +111,30 @@ class FormularioGastoActivity : AppCompatActivity() {
             // IMPORTANTE: NO se abre MainActivity con startActivity (apilaria una segunda lista).
             Toast.makeText(this@FormularioGastoActivity, "Gasto guardado", Toast.LENGTH_SHORT).show()
             finish()
+        }
+    }
+
+    /** Pregunta antes de borrar: eliminar no se puede deshacer. */
+    private fun confirmarEliminacion() {
+        val gasto = gastoEditando ?: return
+        AlertDialog.Builder(this)
+            .setTitle("Eliminar gasto")
+            .setMessage("¿Eliminar \"${gasto.descripcion}\" (${formatearQuetzales(gasto.monto)})?\nEsta acción no se puede deshacer.")
+            // El bloque se ejecuta SOLO si el usuario toca "Eliminar".
+            .setPositiveButton("Eliminar") { _, _ -> eliminar(gasto.id) }
+            // null = solo cerrar el dialogo, sin hacer nada.
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun eliminar(id: Int) {
+        lifecycleScope.launch {
+            if (control.eliminar(id)) {
+                Toast.makeText(this@FormularioGastoActivity, "Gasto eliminado", Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
+                Toast.makeText(this@FormularioGastoActivity, "No existe el gasto #$id", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

@@ -1,19 +1,33 @@
 package umg.edu.gt.controlgastos
 
-import edu.umg.programacion2.gastos.datos.GastoRepositoryEnMemoria
+import android.content.Context
+import androidx.room.Room
 import edu.umg.programacion2.gastos.servicio.ControlGastos
+import umg.edu.gt.controlgastos.datos.AppDatabase
+import umg.edu.gt.controlgastos.datos.GastoRepositoryRoom
 
 /**
  * Las piezas que TODA la app comparte.
  *
- * object = una clase de la que existe UN SOLO objeto. Kotlin lo crea la primera vez que
- * alguien escribe "Dependencias.control" y despues siempre devuelve ese mismo objeto.
+ * object = una clase de la que existe UN SOLO objeto. Las dos pantallas usan
+ * Dependencias.control y ven los MISMOS gastos (Clase 13).
  *
- * IMPORTANTE: por eso la lista y el formulario ven los MISMOS gastos. Si cada Activity
- * hiciera ControlGastos(GastoRepositoryEnMemoria()), cada una tendria su propia lista.
- *
- * En la semana 4 solo cambia esta linea: GastoRepositoryEnMemoria() -> GastoRepositoryRoom(...)
+ * Semana 4: para abrir la base de datos Room necesita un Context (saber "que app soy" y
+ * donde esta su carpeta privada). Un object no tiene Context, asi que lo recibe UNA vez
+ * en iniciar(), que se llama desde ControlGastosApp al arrancar la app.
  */
 object Dependencias {
-    val control = ControlGastos(GastoRepositoryEnMemoria())
+
+    // lateinit: "le doy valor despues, antes de usarla". private set: solo se asigna aqui adentro.
+    lateinit var control: ControlGastos
+        private set
+
+    fun iniciar(context: Context) {
+        // 1. Abre (o crea la primera vez) el archivo gastos.db en la carpeta privada de la app.
+        val baseDeDatos = Room.databaseBuilder(context, AppDatabase::class.java, "gastos.db")
+            .build()
+
+        // 2. EL CAMBIO DE LA SEMANA 4: antes era ControlGastos(GastoRepositoryEnMemoria()).
+        control = ControlGastos(GastoRepositoryRoom(baseDeDatos.gastoDao()))
+    }
 }
